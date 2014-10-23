@@ -30,6 +30,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.net.InetAddress;
 import java.util.ArrayList;
 
 public class TroubleListFragment extends Fragment {
@@ -57,9 +58,11 @@ public class TroubleListFragment extends Fragment {
         dbHelper = new URLDatabaseHelper(getActivity());
 
         if(!AppContext.isInitialized) {
-            LoaderAsyncTask loaderAsyncTask = new LoaderAsyncTask();
+            AsyncLoadJSON loaderAsyncTask = new AsyncLoadJSON(getActivity());
+
             loaderAsyncTask.execute(AppContext.SCENARIOS_URL);
-            AppContext.isInitialized = true;
+
+
         }
         return view;
     }
@@ -67,6 +70,7 @@ public class TroubleListFragment extends Fragment {
         listEnableBroadcast = new ListEnableBroadcast();
         IntentFilter filter = new IntentFilter();
         filter.addAction(AppContext.LIST_ACTION);
+        filter.addAction(AppContext.JSON_LIST_ACTION);
         getActivity().registerReceiver(listEnableBroadcast, filter);
     }
     private void writeToDb(JSONObject jsonObject){
@@ -108,13 +112,16 @@ public class TroubleListFragment extends Fragment {
         super.onDestroy();
     }
     private boolean isNetworkConnected() {
-        ConnectivityManager cm = (ConnectivityManager) getActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo ni = cm.getActiveNetworkInfo();
-        if (ni == null) {
-            // There are no active networks.
-            return false;
-        } else
-            return true;
+
+            ConnectivityManager cm = (ConnectivityManager) getActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo ni = cm.getActiveNetworkInfo();
+            if (ni == null) {
+                // There are no active networks.
+                return false;
+            } else
+                return true;
+
+
     }
     private int getIdFromDb (int position){
 
@@ -132,38 +139,38 @@ public class TroubleListFragment extends Fragment {
         return caseID;
 
     }
-    private class LoaderAsyncTask extends AsyncTask<String, Long, JSONObject> {
-        private ProgressDialog dialog;
-
-        @Override
-        protected void onPreExecute() {
-            this.dialog = new ProgressDialog(getActivity());
-            this.dialog.setMessage(getResources().getString(R.string.loading));
-            if (!this.dialog.isShowing()) {
-                this.dialog.show();
-            }
-        }
-
-        @Override
-        protected JSONObject doInBackground(String... params) {
-            JSONObject jsonObject = null;
-            HttpRequest request = HttpRequest.get(params[0]);
-            if (request.code() == 200) {
-                String response = request.body();
-                try {
-                    jsonObject = new JSONObject(response);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-            return jsonObject;
-        }
-        @Override
-        protected void onPostExecute(JSONObject jsonObject) {
-            writeToDb(jsonObject);
-            this.dialog.dismiss();
-        }
-    }
+//    private class LoaderAsyncTask extends AsyncTask<String, Long, JSONObject> {
+//        private ProgressDialog dialog;
+//
+//        @Override
+//        protected void onPreExecute() {
+//            this.dialog = new ProgressDialog(getActivity());
+//            this.dialog.setMessage(getResources().getString(R.string.loading));
+//            if (!this.dialog.isShowing()) {
+//                this.dialog.show();
+//            }
+//        }
+//
+//        @Override
+//        protected JSONObject doInBackground(String... params) {
+//            JSONObject jsonObject = null;
+//            HttpRequest request = HttpRequest.get(params[0]);
+//            if (request.code() == 200) {
+//                String response = request.body();
+//                try {
+//                    jsonObject = new JSONObject(response);
+//                } catch (JSONException e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//            return jsonObject;
+//        }
+//        @Override
+//        protected void onPostExecute(JSONObject jsonObject) {
+//            writeToDb(jsonObject);
+//            this.dialog.dismiss();
+//        }
+//    }
     private class ListClickListener implements AdapterView.OnItemClickListener {
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -180,22 +187,26 @@ public class TroubleListFragment extends Fragment {
             int caseId = getIdFromDb(position);
             intent.putExtra(AppContext.CASE_ID,caseId);
             getActivity().sendBroadcast(intent);
-
-
-
-
         }
     }
 
     public class ListEnableBroadcast extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
+            String s = intent.getAction();
+
             if (intent.getAction().equals(AppContext.LIST_ACTION)) {
                 listView.setEnabled(true);
                 listView.setAlpha(1f);
+            }
+
+            else if (intent.getAction().equals(AppContext.JSON_LIST_ACTION)) {
+                writeToDb(AppContext.getJsonObject());
+            }
+            }
 
 
             }
-        }
-    }
+
+
 }

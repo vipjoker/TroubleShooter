@@ -30,7 +30,7 @@ public class TroubleActivity extends Activity {
 
     private FragmentBroadcastReciever fragmentBroadcastReciever;
     private URLDatabaseHelper dbHelper;
-    private LoaderAsyncTask loader;
+    private AsyncLoadJSON loader;
     private String url;
     private int positive;
     private int negative;
@@ -50,6 +50,7 @@ public class TroubleActivity extends Activity {
         fragmentBroadcastReciever = new FragmentBroadcastReciever();
         IntentFilter filter = new IntentFilter();
         filter.addAction(AppContext.BROADCAST_ACTION);
+        filter.addAction(AppContext.JSON_ACTION);
         registerReceiver(fragmentBroadcastReciever, filter);
 
         int orient = this.getResources().getConfiguration().orientation;
@@ -91,7 +92,6 @@ public class TroubleActivity extends Activity {
         }
         else
         super.onBackPressed();
-
     }
 
     @Override
@@ -106,8 +106,6 @@ public class TroubleActivity extends Activity {
             default:
                 return false;
         }
-
-
     }
 
     private void startNewFragment() {
@@ -218,8 +216,6 @@ public class TroubleActivity extends Activity {
         startNewFragment();
     }
 
-
-
     public class FragmentBroadcastReciever extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -227,47 +223,18 @@ public class TroubleActivity extends Activity {
                 int caseId = intent.getIntExtra(AppContext.CASE_ID, 0);
 
                 if (!loadFromDb(caseId)) {
-                    loader = new LoaderAsyncTask();
+                    loader = new AsyncLoadJSON(TroubleActivity.this);
                     loader.execute(AppContext.DETAILS_URL + caseId);
                     return;
                 }
                 startNewFragment();
             }
+            if(intent.getAction().equals(AppContext.JSON_ACTION)){
+                writeToCaseDB(AppContext.getJsonObject());
+            }
+
         }
     }
 
-    private class LoaderAsyncTask extends AsyncTask<String, Long, JSONObject> {
-        private ProgressDialog dialog;
 
-        @Override
-        protected void onPreExecute() {
-            this.dialog = new ProgressDialog(TroubleActivity.this);
-            this.dialog.setMessage(getResources().getString(R.string.loading));
-            if (!this.dialog.isShowing()) {
-                this.dialog.show();
-            }
-        }
-
-        @Override
-        protected JSONObject doInBackground(String... params) {
-            JSONObject jsonObject = null;
-            HttpRequest request = HttpRequest.get(params[0]);
-
-            if (request.code() == 200) {
-                String response = request.body();
-                try {
-                    jsonObject = new JSONObject(response);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-            return jsonObject;
-        }
-
-        @Override
-        protected void onPostExecute(JSONObject jsonObject) {
-            writeToCaseDB(jsonObject);
-            this.dialog.dismiss();
-        }
-    }
 }

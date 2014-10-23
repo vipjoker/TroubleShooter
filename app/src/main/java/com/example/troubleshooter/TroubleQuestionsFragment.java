@@ -1,25 +1,20 @@
 package com.example.troubleshooter;
 
 
+
 import android.app.Fragment;
-import android.app.FragmentTransaction;
 import android.app.ProgressDialog;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.example.troubleshooter.database.URLDatabaseHelper;
 import com.github.kevinsawicki.http.HttpRequest;
@@ -32,43 +27,43 @@ public class TroubleQuestionsFragment extends Fragment {
     private TextView textView;
     private Button btn_positive;
     private Button btn_negative;
-    private int positive ;
-    private int negative ;
-    private String text;
-    private String url;
-    private String positiveText;
-    private String negativeText;
+
+    private CaseInfo caseinfo;
+
     LoadImage loadImage;
     URLDatabaseHelper dbHelper;
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.trouble_question_fragment_layout,container,false);
-
+        View view = inflater.inflate(R.layout.trouble_question_fragment_layout, container, false);
+        caseinfo = new CaseInfo();
         loadImage = new LoadImage();
         dbHelper = new URLDatabaseHelper(getActivity());
-        imageView = (ImageView)view.findViewById(R.id.img_question);
-        textView  = (TextView)view.findViewById(R.id.txt_question);
+        imageView = (ImageView) view.findViewById(R.id.img_question);
+        textView = (TextView) view.findViewById(R.id.txt_question);
 
-        btn_negative = (Button)view.findViewById(R.id.btn_negative);
-        btn_positive = (Button)view.findViewById(R.id.btn_positive);
+        btn_negative = (Button) view.findViewById(R.id.btn_negative);
+        btn_positive = (Button) view.findViewById(R.id.btn_positive);
         btn_negative.setOnClickListener(new MyOnClickListener());
         btn_positive.setOnClickListener(new MyOnClickListener());
         loadFromBundle(getArguments());
         loadComponentInfo();
         return view;
     }
-    private void loadComponentInfo(){
-        textView.setText(text);
 
-        if(positive != 0){
-            loadImage.execute(url);
-            btn_negative.setText(negativeText);
-            btn_positive.setText(positiveText);
-        }else{
+    private void loadComponentInfo() {
+        textView.setText(caseinfo.getText());
+
+        if (caseinfo.getPositiveID() != 0) {
+            loadImage.execute(caseinfo.getUrl());
+            btn_negative.setText(caseinfo.getNegativeText());
+            btn_positive.setText(caseinfo.getPositiveText());
+        } else {
             lastQuestionInit();
         }
     }
-    private void lastQuestionInit (){
+
+    private void lastQuestionInit() {
 
         btn_positive.setVisibility(View.GONE);
         btn_negative.setVisibility(View.GONE);
@@ -79,35 +74,36 @@ public class TroubleQuestionsFragment extends Fragment {
 
             getActivity().getActionBar().setDisplayHomeAsUpEnabled(true);
         } else {
-           Intent intent = new Intent(AppContext.LIST_ACTION);
+            Intent intent = new Intent(AppContext.LIST_ACTION);
             getActivity().sendBroadcast(intent);
         }
     }
-    private void loadFromBundle(Bundle bundle){
-        positiveText = bundle.getString(AppContext.BUNDLE_YES_TEXT);
-        negativeText = bundle.getString(AppContext.BUNDLE_NO_TEXT);
-        positive = bundle.getInt(AppContext.BUNDLE_YES );
-        negative = bundle.getInt(AppContext.BUNDLE_NO );
-        text = bundle.getString(AppContext.BUNDLE_TEXT);
-        url = bundle.getString(AppContext.BUNDLE_URL);
+
+    private void loadFromBundle(Bundle bundle) {
+        caseinfo.setPositiveText(bundle.getString(AppContext.BUNDLE_YES_TEXT));
+        caseinfo.setNegativeText(bundle.getString(AppContext.BUNDLE_NO_TEXT));
+        caseinfo.setPositiveID(bundle.getInt(AppContext.BUNDLE_YES));
+        caseinfo.setNegativeID(bundle.getInt(AppContext.BUNDLE_NO));
+        caseinfo.setText(bundle.getString(AppContext.BUNDLE_TEXT));
+        caseinfo.setUrl(bundle.getString(AppContext.BUNDLE_URL));
     }
 
-    private class MyOnClickListener implements View.OnClickListener{
+    private class MyOnClickListener implements View.OnClickListener {
         @Override
         public void onClick(View v) {
             switch (v.getId()) {
-                case R.id.btn_negative:{
+                case R.id.btn_negative: {
 
                     Intent intent = new Intent(AppContext.BROADCAST_ACTION);
-                    intent.putExtra(AppContext.CASE_ID,negative);
+                    intent.putExtra(AppContext.CASE_ID, caseinfo.getNegativeID());
                     getActivity().sendBroadcast(intent);
                 }
                 break;
-                case R.id.btn_positive:{
+                case R.id.btn_positive: {
 
-                    Intent intent =new Intent(AppContext.BROADCAST_ACTION);
-                    intent.putExtra(AppContext.CASE_ID , positive);
-                  getActivity().sendBroadcast(intent);
+                    Intent intent = new Intent(AppContext.BROADCAST_ACTION);
+                    intent.putExtra(AppContext.CASE_ID, caseinfo.getPositiveID());
+                    getActivity().sendBroadcast(intent);
                 }
                 break;
                 default:
@@ -115,8 +111,9 @@ public class TroubleQuestionsFragment extends Fragment {
             }
         }
     }
-    private class LoadImage extends AsyncTask<String, Void , Bitmap>{
+    private class LoadImage extends AsyncTask<String, Void, Bitmap> {
         private ProgressDialog dialog;
+
         @Override
         protected Bitmap doInBackground(String... params) {
             Bitmap bitmap = null;
@@ -128,12 +125,13 @@ public class TroubleQuestionsFragment extends Fragment {
             }
             return bitmap;
         }
+
         @Override
         protected void onPreExecute() {
 
             this.dialog = new ProgressDialog(getActivity());
-            this.dialog.setMessage(getResources().getString(R.string.loading));
-            if (!this.dialog.isShowing()){
+            this.dialog.setMessage(getActivity().getResources().getString(R.string.loading));
+            if (!this.dialog.isShowing()) {
                 this.dialog.show();
             }
         }
@@ -145,6 +143,4 @@ public class TroubleQuestionsFragment extends Fragment {
 
         }
     }
-
-
 }
